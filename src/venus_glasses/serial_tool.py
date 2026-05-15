@@ -10,7 +10,7 @@ from collections import deque
 from logging.handlers import RotatingFileHandler
 from typing import Callable, Deque, Optional
 
-import serial
+import re
 
 from venus_glasses.enums import (
     ButtonEvent,
@@ -588,7 +588,13 @@ class VenusSerialTool:
             Bluetooth name string, empty string if failed
         """
         command = "rnl getname"
-        return self.send_command_and_wait_response(command, timeout=timeout)
+        response = self.send_command_and_wait_response(command, timeout=timeout)
+
+        # 解析蓝牙名称，匹配格式: "local bluetooth device name: Venus-413"
+        match = re.search(r"local bluetooth device name:\s*(\S+)", response)
+        if match:
+            return match.group(1)
+        return ""
 
     def start_advertising(self) -> bool:
         """Start Bluetooth advertising. Command: rnl startadv"""
