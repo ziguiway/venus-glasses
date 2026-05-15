@@ -9,7 +9,7 @@ import uuid
 from collections import deque
 from logging.handlers import RotatingFileHandler
 from typing import Callable, Deque, Optional
-
+import serial
 import re
 
 from venus_glasses.enums import (
