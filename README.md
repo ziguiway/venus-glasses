@@ -1,0 +1,422 @@
+# Venus Glasses
+
+Venus 智能眼镜串口通信库，用于与 Venus 设备进行串口通信和控制。
+
+## 安装
+
+```bash
+pip install venus-glasses
+```
+
+## 快速开始
+
+```python
+from venus_glasses import VenusSerialTool, ButtonEvent
+
+# 连接设备
+device = VenusSerialTool("COM18")
+device.start_log("./logs")
+
+# 发送按钮事件
+device.send_btn_event(ButtonEvent.CLICK)
+
+# 停止记录
+device.stop_log()
+```
+
+---
+
+## API 参考
+
+### 枚举类型
+
+#### ButtonEvent - 按钮事件
+
+| 枚举值 | 数值 | 描述 | 命令 |
+|--------|------|------|------|
+| `INVALID` | 0 | 无效事件 | `lvgl btn_send 0` |
+| `PRESS` | 1 | 按下 | `lvgl btn_send 1` |
+| `CLICK` | 2 | 单击 | `lvgl btn_send 2` |
+| `DOUBLE_CLICK` | 3 | 双击 | `lvgl btn_send 3` |
+| `TRIPLE_CLICK` | 4 | 三击 | `lvgl btn_send 4` |
+| `FIVE_CLICK` | 5 | 五击 | `lvgl btn_send 5` |
+| `HOLD_1S` | 6 | 长按 1 秒 | `lvgl btn_send 6` |
+| `HOLD_3S` | 7 | 长按 3 秒 | `lvgl btn_send 7` |
+| `HOLD_5S` | 8 | 长按 5 秒 | `lvgl btn_send 8` |
+| `HOLD_8S` | 9 | 长按 8 秒 | `lvgl btn_send 9` |
+| `FAC_RESET` | 10 | 工厂重置 | `lvgl btn_send 10` |
+| `RELEASED` | 11 | 释放 | `lvgl btn_send 11` |
+
+#### OtsEvent - OTS 旋钮事件
+
+| 枚举值 | 数值 | 描述 | 命令 |
+|--------|------|------|------|
+| `CLOCKWISE` | 45 | 顺时针旋转 | `uorb_injector ots 45` |
+| `COUNTER_CLOCKWISE` | -45 | 逆时针旋转 | `uorb_injector ots -45` |
+
+#### RecorderEvent - 录音事件
+
+| 枚举值 | 描述 | 命令 |
+|--------|------|------|
+| `START` | 开始录音 | `uorb_injector recorder start` |
+| `PAUSE` | 暂停录音 | `uorb_injector recorder pause` |
+| `RESUME` | 恢复录音 | `uorb_injector recorder resume` |
+| `STOP` | 停止录音 | `uorb_injector recorder stop` |
+| `INFO` | 查询录音状态 | `uorb_injector recorder info` |
+
+#### TempleEvent - 眼镜镜腿事件
+
+| 枚举值 | 数值 | 描述 | 命令 |
+|--------|------|------|------|
+| `FOLD` | 1 | 折叠 | `uorb_injector hall 1` |
+| `UNFOLD` | 0 | 展开 | `uorb_injector hall 0` |
+
+#### LightBrightnessEvent - 灯亮度事件
+
+| 枚举值 | 数值 | 描述 | 命令 |
+|--------|------|------|------|
+| `LEVEL_0` | 0 | 亮度级别 0 | `aw21104 --level 0` |
+| `LEVEL_1` | 1 | 亮度级别 1 | `aw21104 --level 1` |
+| `LEVEL_2` | 2 | 亮度级别 2 | `aw21104 --level 2` |
+
+#### TranslatorStartType - 翻译启动类型
+
+| 枚举值 | 描述 | 命令 |
+|--------|------|------|
+| `CLASSIC` | 经典模式 | `translator start classic` |
+| `TITLE` | 标题模式 | `translator start title` |
+
+#### TranslatorStopReason - 翻译停止原因
+
+| 枚举值 | 数值 | 描述 | 命令 |
+|--------|------|------|------|
+| `GESTURE` | 1 | 手势停止 | `translator stop 1` |
+| `APP` | 2 | 应用停止 | `translator stop 2` |
+| `BT` | 3 | 蓝牙停止 | `translator stop 3` |
+| `TIMEOUT` | 4 | 超时停止 | `translator stop 4` |
+
+---
+
+### VenusSerialTool 类
+
+#### 构造函数
+
+```python
+VenusSerialTool(
+    com_name: str,
+    baudrate: int = 921600,
+    bytesize: int = 8,
+    parity: str = "N",
+    stopbits: int = 1,
+    timeout: float = 0.1,
+    write_timeout: float = 1.0,
+    command_terminator: str = "\r\n",
+)
+```
+
+| 参数 | 类型 | 默认值 | 描述 |
+|------|------|--------|------|
+| `com_name` | str | 必填 | 串口名称 (如 COM18, /dev/ttyUSB0) |
+| `baudrate` | int | 921600 | 波特率 |
+| `bytesize` | int | 8 | 数据位 |
+| `parity` | str | "N" | 校验位 |
+| `stopbits` | int | 1 | 停止位 |
+| `timeout` | float | 0.1 | 读超时（秒） |
+| `write_timeout` | float | 1.0 | 写超时（秒） |
+| `command_terminator` | str | "\r\n" | 指令终止符 |
+
+#### 属性
+
+| 属性 | 类型 | 描述 |
+|------|------|------|
+| `com_name` | str | 串口名称 |
+| `log_path` | str \| None | 日志路径 |
+| `is_logging` | bool | 是否正在记录日志 |
+| `is_serial_connected` | bool | 串口是否已连接 |
+
+---
+
+#### 日志管理方法
+
+| 方法 | 参数 | 返回值 | 描述 |
+|------|------|--------|------|
+| `start_log(log_path)` | log_path: str | None | 开始日志记录 |
+| `stop_log()` | - | None | 停止日志记录 |
+| `read_log(duration)` | duration: float = 0.0 | str | 读取指定时长日志 |
+| `clear_log_cache()` | - | None | 清空日志缓存 |
+
+#### 串口控制方法
+
+| 方法 | 参数 | 返回值 | 描述 |
+|------|------|--------|------|
+| `send_command(command)` | command: str | bool | 发送原始串口指令 |
+| `send_command_and_wait_response(command, timeout, idle_timeout, strip_echo)` | command: str, timeout: float = 5.0, idle_timeout: float = 0.3, strip_echo: bool = True | str | 发送指令并等待响应 |
+
+#### 监听器方法
+
+| 方法 | 参数 | 返回值 | 描述 |
+|------|------|--------|------|
+| `register_watcher(keyword, watcher)` | keyword: str \| list, watcher: Callable[[str], None] | None | 注册关键词监听器 |
+| `unregister_watcher(keyword)` | keyword: str | None | 取消关键词监听 |
+| `clear_watcher()` | - | None | 清空所有监听器 |
+
+---
+
+#### 按钮事件方法
+
+| 方法 | 参数 | 返回值 | 描述 |
+|------|------|--------|------|
+| `send_btn_event(btn_event)` | btn_event: ButtonEvent | bool | 发送按钮事件 |
+
+#### OTS 旋钮方法
+
+| 方法 | 参数 | 返回值 | 描述 |
+|------|------|--------|------|
+| `send_ots_event(ots_event)` | ots_event: OtsEvent | bool | 发送 OTS 旋转事件 |
+
+#### 录音方法
+
+| 方法 | 参数 | 返回值 | 描述 |
+|------|------|--------|------|
+| `send_recorder_event(recorder_event)` | recorder_event: RecorderEvent | bool | 发送录音事件 |
+
+#### 眼镜镜腿方法
+
+| 方法 | 参数 | 返回值 | 描述 |
+|------|------|--------|------|
+| `send_temple_event(temple_event)` | temple_event: TempleEvent | bool | 发送镜腿折叠/展开事件 |
+
+#### 灯亮度方法
+
+| 方法 | 参数 | 返回值 | 描述 |
+|------|------|--------|------|
+| `send_light_brightness_event(light_brightness_event)` | light_brightness_event: LightBrightnessEvent | bool | 发送灯亮度事件 |
+
+#### 翻译方法
+
+| 方法 | 参数 | 返回值 | 描述 |
+|------|------|--------|------|
+| `send_translator_start_type(translator_start_type)` | translator_start_type: TranslatorStartType | bool | 发送翻译启动类型 |
+| `send_translator_stop_reason(translator_stop_reason)` | translator_stop_reason: TranslatorStopReason | bool | 发送翻译停止原因 |
+
+#### 显示方法
+
+| 方法 | 参数 | 返回值 | 描述 |
+|------|------|--------|------|
+| `send_display_always_on(display_always_on, source)` | display_always_on: bool, source: str = "system" | bool | 设置显示常亮 |
+
+#### 系统方法
+
+| 方法 | 参数 | 返回值 | 描述 |
+|------|------|--------|------|
+| `set_ap_perf_mode()` | - | bool | 设置 AP 性能模式 |
+| `reboot()` | - | bool | 重启眼镜 |
+
+---
+
+#### 蓝牙方法
+
+| 方法 | 参数 | 返回值 | 描述 | 命令 |
+|------|------|--------|------|------|
+| `remove_bond()` | - | bool | 解除蓝牙绑定 | `rnl rmbond 1` |
+| `set_bt_name(name)` | name: str | bool | 设置蓝牙名称 | `rnl setname {name}` |
+| `get_bt_name()` | - | bool | 获取蓝牙名称 | `rnl getname` |
+| `start_advertising()` | - | bool | 打开蓝牙广播 | `rnl startadv` |
+
+#### 日志开关方法
+
+| 方法 | 参数 | 返回值 | 描述 | 命令 |
+|------|------|--------|------|------|
+| `set_log_all(enable)` | enable: bool | bool | 开启/关闭所有日志 | `rntests log {0\|1}` |
+| `set_log_ap(enable)` | enable: bool | bool | 开启/关闭 AP 日志 | `rntests log ap {0\|1}` |
+| `set_log_hifi(enable)` | enable: bool | bool | 开启/关闭 hifi 日志 | `rntests log hifi {0\|1}` |
+| `set_log_apc1(enable)` | enable: bool | bool | 开启/关闭 apc1 日志 | `rntests log apc1 {0\|1}` |
+| `set_log_bth(enable)` | enable: bool | bool | 开启/关闭 bth 日志 | `rntests log bth {0\|1}` |
+
+---
+
+## 使用示例
+
+### 基本连接和日志记录
+
+```python
+from venus_glasses import VenusSerialTool
+
+# 连接设备
+device = VenusSerialTool("COM18")
+
+# 开始记录日志
+device.start_log("./logs/venus")
+
+# 发送指令并获取响应
+response = device.send_command_and_wait_response("help", timeout=5.0)
+print(response)
+
+# 停止记录
+device.stop_log()
+```
+
+### 发送按钮事件
+
+```python
+from venus_glasses import VenusSerialTool, ButtonEvent
+
+device = VenusSerialTool("COM18")
+device.start_log("./logs")
+
+# 单击
+device.send_btn_event(ButtonEvent.CLICK)
+
+# 双击
+device.send_btn_event(ButtonEvent.DOUBLE_CLICK)
+
+# 长按 3 秒
+device.send_btn_event(ButtonEvent.HOLD_3S)
+
+# 工厂重置
+device.send_btn_event(ButtonEvent.FAC_RESET)
+```
+
+### 发送 OTS 旋钮事件
+
+```python
+from venus_glasses import VenusSerialTool, OtsEvent
+
+device = VenusSerialTool("COM18")
+device.start_log("./logs")
+
+# 顺时针旋转
+device.send_ots_event(OtsEvent.CLOCKWISE)
+
+# 逆时针旋转
+device.send_ots_event(OtsEvent.COUNTER_CLOCKWISE)
+```
+
+### 录音控制
+
+```python
+from venus_glasses import VenusSerialTool, RecorderEvent
+
+device = VenusSerialTool("COM18")
+device.start_log("./logs")
+
+# 开始录音
+device.send_recorder_event(RecorderEvent.START)
+
+# 暂停录音
+device.send_recorder_event(RecorderEvent.PAUSE)
+
+# 恢复录音
+device.send_recorder_event(RecorderEvent.RESUME)
+
+# 停止录音
+device.send_recorder_event(RecorderEvent.STOP)
+
+# 查询录音状态
+device.send_recorder_event(RecorderEvent.INFO)
+```
+
+### 翻译功能
+
+```python
+from venus_glasses import VenusSerialTool, TranslatorStartType, TranslatorStopReason
+
+device = VenusSerialTool("COM18")
+device.start_log("./logs")
+
+# 开始翻译（经典模式）
+device.send_translator_start_type(TranslatorStartType.CLASSIC)
+
+# 停止翻译（手势停止）
+device.send_translator_stop_reason(TranslatorStopReason.GESTURE)
+```
+
+### 蓝牙操作
+
+```python
+from venus_glasses import VenusSerialTool
+
+device = VenusSerialTool("COM18")
+device.start_log("./logs")
+
+# 设置蓝牙名称
+device.set_bt_name("MyVenusGlasses")
+
+# 获取蓝牙名称
+device.get_bt_name()
+
+# 打开蓝牙广播
+device.start_advertising()
+
+# 解除蓝牙绑定
+device.remove_bond()
+```
+
+### 日志开关
+
+```python
+from venus_glasses import VenusSerialTool
+
+device = VenusSerialTool("COM18")
+device.start_log("./logs")
+
+# 开启所有日志
+device.set_log_all(True)
+
+# 关闭 AP 日志
+device.set_log_ap(False)
+
+# 开启 bth 日志
+device.set_log_bth(True)
+```
+
+### 显示常亮
+
+```python
+from venus_glasses import VenusSerialTool
+
+device = VenusSerialTool("COM18")
+device.start_log("./logs")
+
+# 打开显示常亮
+device.send_display_always_on(True)
+
+# 关闭显示常亮
+device.send_display_always_on(False)
+
+# 使用自定义来源
+device.send_display_always_on(True, source="custom")
+```
+
+### 注册日志监听器
+
+```python
+from venus_glasses import VenusSerialTool
+
+def on_crash(line: str):
+    print(f"检测到崩溃: {line}")
+
+def on_error(line: str):
+    print(f"检测到错误: {line}")
+
+device = VenusSerialTool("COM18")
+device.start_log("./logs")
+
+# 注册单个关键词监听
+device.register_watcher("crash", on_crash)
+
+# 注册多个关键词监听
+device.register_watcher(["panic", "error"], on_error)
+
+# 取消监听
+device.unregister_watcher("crash")
+
+# 清空所有监听
+device.clear_watcher()
+```
+
+---
+
+## 许可证
+
+MIT
