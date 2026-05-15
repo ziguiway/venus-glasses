@@ -578,10 +578,17 @@ class VenusSerialTool:
         command = f"rnl setname {name}"
         return self.send_command(command)
 
-    def get_bt_name(self) -> bool:
-        """Get Bluetooth name. Command: rnl getname"""
+    def get_bt_name(self, timeout: float = 5.0) -> str:
+        """Get Bluetooth name. Command: rnl getname
+
+        Args:
+            timeout: Response timeout in seconds
+
+        Returns:
+            Bluetooth name string, empty string if failed
+        """
         command = "rnl getname"
-        return self.send_command(command)
+        return self.send_command_and_wait_response(command, timeout=timeout)
 
     def start_advertising(self) -> bool:
         """Start Bluetooth advertising. Command: rnl startadv"""
