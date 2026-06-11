@@ -262,6 +262,40 @@ class TestLogCommands:
             assert result == True
 
 
+class TestParseNotificationLine:
+    """Test notification log line parsing."""
+
+    def setup_method(self):
+        with patch("venus_glasses.serial_tool.serial.Serial"):
+            self.tool = VenusSerialTool("COM18")
+
+    def test_incoming_call(self):
+        line = (
+            '[APP_INFO] NotificationMessageProcessor::handleNotificationReceived: '
+            '{"notificationUID":"7","appId":"com.samsung.android.incallui",'
+            '"appName":"通话","title":"157 1621 6316","content":"来电","category":0}'
+        )
+        result = self.tool.parse_notification_line(line)
+        assert result is not None
+        assert result["is_incoming_call"] is True
+        assert result["is_missed_call"] is False
+        assert result["phone_number"] == "15716216316"
+
+    def test_missed_call(self):
+        line = (
+            '[APP_INFO] NotificationMessageProcessor::handleNotificationReceived: '
+            '{"notificationUID":"8","appId":"com.samsung.android.dialer",'
+            '"appName":"电话","title":"未接来电","content":"157 1621 6316","category":1}'
+        )
+        result = self.tool.parse_notification_line(line)
+        assert result is not None
+        assert result["is_missed_call"] is True
+        assert result["is_incoming_call"] is False
+
+    def test_non_notification_line(self):
+        assert self.tool.parse_notification_line("some random log") is None
+
+
 class TestSendCommand:
     """Test send_command method."""
 

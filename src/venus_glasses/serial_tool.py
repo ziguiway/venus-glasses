@@ -1,5 +1,6 @@
 """Venus serial communication tool."""
 
+import json
 import logging
 import os
 import queue
@@ -202,9 +203,6 @@ class VenusSerialTool:
         self._writer_queue.put_nowait(line)
         self._watcher_queue.put_nowait(line)
 
-        if self._nuttx_logger:
-            self._nuttx_logger.info(line)
-
         with self._command_condition:
             self._command_lines.append(line)
             self._command_condition.notify_all()
@@ -390,6 +388,65 @@ class VenusSerialTool:
     def clear_watcher(self) -> None:
         """Clear all watchers."""
         self._watchers.clear()
+
+    def parse_notification_line(self, line: str) -> Optional[dict]:
+        """Parse phone notification from a serial log line.
+
+        Log marker: ``NotificationMessageProcessor::handleNotificationReceived:``
+
+        Returns ``None`` if the line is not a notification log. Otherwise a dict with
+        ``is_incoming_call``, ``is_missed_call``, ``is_message``, ``phone_number``,
+        ``title``, ``content``, ``app_id``, ``app_name``, ``uid``.
+        """
+        marker = "NotificationMessageProcessor::handleNotificationReceived:"
+        idx = line.find(marker)
+        if idx < 0:
+            return None
+
+        payload = line[idx + len(marker) :].strip()
+        if not payload.startswith("{"):
+            return None
+
+        try:
+            data = json.loads(payload)
+        except json.JSONDecodeError:
+            return None
+
+        app_id = str(data.get("appId") or "")
+        title = str(data.get("title") or "")
+        content = str(data.get("content") or "")
+        app_name = str(data.get("appName") or "")
+
+        is_incoming_call = (
+            "incallui" in app_id
+            and (
+                content == "来电"
+                or (content == "" and title and title not in ("未接来电",))
+            )
+        )
+        is_missed_call = "未接来电" in title or (
+            "dialer" in app_id and int(data.get("category") or 0) == 1
+        )
+        is_message = any(x in app_id for x in ("messaging", ".mms", "message"))
+
+        phone_number = ""
+        for text in (title, content):
+            digits = re.sub(r"\D", "", text)
+            if len(digits) >= 7:
+                phone_number = digits
+                break
+
+        return {
+            "is_incoming_call": is_incoming_call,
+            "is_missed_call": is_missed_call,
+            "is_message": is_message,
+            "phone_number": phone_number,
+            "title": title,
+            "content": content,
+            "app_id": app_id,
+            "app_name": app_name,
+            "uid": str(data.get("notificationUID") or ""),
+        }
 
     def send_command(self, command: str) -> bool:
         """Send a raw serial command."""

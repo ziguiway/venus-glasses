@@ -39,6 +39,7 @@ Thumbs.db
 .pytest_cache/
 .coverage
 htmlcov/
+test_logs/*.log
 
 # uv
 .uv/
