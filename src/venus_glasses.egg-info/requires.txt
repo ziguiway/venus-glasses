@@ -1,6 +1,0 @@
-pyserial>=3.5
-backoff>=2.2.1
-
-[dev]
-pytest>=8.0
-ruff>=0.8.0
